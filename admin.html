@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin – Send Announcement</title>
+</head>
+<body>
+  <h1>🔐 Admin – Publish Announcement</h1>
+
+  <textarea id="msg" rows="4" cols="60"
+            placeholder="Enter your announcement…"></textarea><br>
+
+  <button id="sendBtn">Send</button>
+
+  <script>
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+      const text = document.getElementById('msg').value.trim();
+      if (!text) return alert('Please type an announcement first.');
+
+      // -----------------------------------------------------------------
+      // 1️⃣ POST to the repo’s dispatch endpoint.
+      //    The token below must be a **repo‑scoped personal access token**
+      //    that has the `repo` scope and is stored as a secret called
+      //    `DISPATCH_TOKEN` in the repository (Settings → Secrets).
+      // -----------------------------------------------------------------
+      const payload = { announcement: text };
+      const resp = await fetch('https://api.github.com/repos/OWNER/REPO/dispatches', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `token DISPATCH_TOKEN`,   // <-- secret injected by GitHub Pages (see note)
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          event_type: 'create_announcement',
+          client_payload: payload
+        })
+      });
+
+      if (resp.ok) {
+        alert('✅ Announcement posted! Reload the public page to see it.');
+      } else {
+        const err = await resp.text();
+        alert('❌ Failed: ' + err);
+      }
+    });
+  </script>
+</body>
+</html>
