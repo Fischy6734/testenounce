@@ -1,0 +1,54 @@
+# -------------------------------------------------------------
+#  GitHub Actions workflow that creates an announcement
+#  when it receives a repository‑dispatch event named
+#  `create_announcement`.  This file lives at#  .github/workflows/main.yml  (the name you requested).
+# -------------------------------------------------------------name: Create Announcement
+
+# Triggered by the dispatch we fire from admin.html
+on:
+  repository_dispatch:
+    types: [create_announcement]   # matches the event_type we send from admin.html
+
+jobs:
+  make-announcement:
+    runs-on: ubuntu-latest
+    # The default GITHUB_TOKEN already has permission to create discussions
+    # (it’s scoped to the repo).  No extra permissions needed.
+
+    steps:
+      # -----------------------------------------------------------------
+      # 1️⃣ Extract the announcement string from the dispatch payload
+      # -----------------------------------------------------------------
+      - name: Extract announcement payload
+        id: payload
+        run: |
+          # `github.event.client_payload` contains the object we sent from admin.html
+          echo "announcement=$(jq -r .client_payload.announcement)" >> $GITHUB_OUTPUT      # -----------------------------------------------------------------
+      # 2️⃣ Create a **public discussion** in the “Announcements” category      # -----------------------------------------------------------------
+      - name: Create discussion
+        env:
+          ANNOUNCEMENT: ${{ steps.payload.outputs.announcement }}
+        run: |
+          gh discussion create "📢 New Announcement" \
+            --body "$ANNOUNCEMENT" \
+            --category "Announcements" \
+            --visibility "public"
+
+      # -----------------------------------------------------------------
+      # 3️⃣ (Optional but handy) Write the announcement to a file so the
+      #    public page can read it directly – no extra server needed.
+      # -----------------------------------------------------------------
+      - name: Write announcement file
+        env:
+          ANNOUNCEMENT: ${{ steps.payload.outputs.announcement }}
+        run: |
+          echo "# Latest Announcement" > ANNNOUNCEMENT.md
+          echo ""               >> ANNNOUNCEMENT.md          echo "$ANNOUNCEMENT"  >> ANNNOUNCEMENT.md
+
+          # Configure git user for the action
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name  "github-actions[bot]"
+
+          git add ANNNOUNCEMENT.md
+          git commit -m "Add new announcement"
+          git push
